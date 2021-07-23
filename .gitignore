@@ -1,0 +1,41 @@
+# Folders
+/.git
+/.cache
+/.idea
+/.well-known
+/cgi-bin
+/bitrix
+/upload
+/test
+
+# Files
+Thumbs.db
+.DS_Store
+.htsecure
+/.htpasswd
+/.htaccess.restore
+/.htaccess
+/.htaccess.old
+/.ftpaccess
+/web.config
+/*.ini
+/*.txt
+/*.log
+/robots.txt
+/sitemap.xml
+/sitemap*.xml
+/yandex*.html
+/google*.html
+
+# Archives
+*.7z
+*.xar
+*.zip
+*.zipx
+*.rar
+*.gz
+*.gzip
+*.tar
+*.tgz
+*.tar-gz
+*.tar.gz
