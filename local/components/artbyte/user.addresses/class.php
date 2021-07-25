@@ -28,10 +28,37 @@ class UserAddresses extends CBitrixComponent
     /** @var string навзвание таблицы HL-блока */
     const HL_TABLE_NAME = "artbyte_hl_user_addresses";
 
+    /** @var string ключ параметра Выводить только активные адреса */
+    const USE_ACTIVE_ADDRESSES = "USE_ACTIVE_ADDRESSES";
+
+    /** @var string директория хранения кеша */
+    const CACHE_DIR = "/artbyte_user_addresses";
+
+    /** @var string тэг кеша */
+    const CACHE_TAG = "artbyte_user_addresses";
+
+    /** @var string ID таблицы в шаблоне компонента */
+    const GRID_ID = "user_addresses";
+
     /** @var string поля HL-блока */
+    const ID = "ID";
     const USER_ID = "UF_USER_ID";
-    const ADDRESS = "UF_ADDRESS";
+    const ADDRESS = "UF_USER_ADDRESS";
     const ACTIVE = "UF_ACTIVE";
+
+    /**
+     * Предварительная обработка параметров компонента
+     *
+     * @param $arParams
+     * @return array
+     */
+    public function onPrepareComponentParams($arParams)
+    {
+        $arParams = parent::onPrepareComponentParams($arParams);
+        $arParams[self::USE_ACTIVE_ADDRESSES] = $arParams[self::USE_ACTIVE_ADDRESSES] ?? "N";
+
+        return $arParams;
+    }
 
     /**
      * Выполнение компонента
@@ -42,17 +69,60 @@ class UserAddresses extends CBitrixComponent
     {
         global $USER, $CACHE_MANAGER;
 
-        if (!$USER->IsAuthorized()) {
+        $pagerParameters = CDBResult::GetNavParams($arNavParams);
+
+        if (!$USER->IsAuthorized())
+        {
             return;
         }
 
-        try {
-
+        try
+        {
             $this->includeModule();
 
+            $cacheKey = md5(SITE_ID . $USER->GetID() . serialize($this->arParams) . serialize($pagerParameters));
 
-            $this->initComponentTemplate();
-        } catch (Exception $ex) {
+            if ($this->startResultCache(false, [$USER->GetID(), $this->arParams, $pagerParameters], self::CACHE_DIR))
+            {
+
+                if ($this->includedTagCache())
+                {
+                    $CACHE_MANAGER->RegisterTag(self::CACHE_TAG);
+                }
+
+                $gridOptions = new Bitrix\Main\Grid\Options(self::GRID_ID);
+                $navParams = $gridOptions->GetNavParams();
+
+                $nav = new Bitrix\Main\UI\PageNavigation(self::GRID_ID);
+                $nav->allowAllRecords(false)
+                    ->setPageSize(1)
+                    ->initFromUri();
+
+                $hlBlock = $this->getHLTable();
+                $useActive = $this->arParams[self::USE_ACTIVE_ADDRESSES] === "Y";
+                $pageCount = $this->getPageCount($hlBlock, $USER->GetID(), $useActive);
+                $tableData = $this->getHLData($hlBlock, $USER->GetID(), $nav->getOffset(), $nav->getLimit(), $useActive);
+
+                $nav->setRecordCount($pageCount);
+                $this->arResult["PAGE_NAVIGATION"] = $nav;
+
+                $this->arResult["ITEMS"] = $this->prepareData($tableData);
+                $this->arResult["COLUMNS"] = [
+                    ['id' => self::ID, 'name' => self::ID, 'sort' => self::ID, 'default' => true],
+                    ['id' => self::ADDRESS, 'name' => Loc::getMessage("UA_CLASS_ADDRESS"), 'sort' => self::ADDRESS, 'default' => true]
+                ];
+
+                $this->setResultCacheKeys([
+                    "ITEMS",
+                    "COLUMNS",
+                    "PAGE_NAVIGATION"
+                ]);
+            }
+
+            $this->includeComponentTemplate();
+        }
+        catch (Exception $ex)
+        {
             $this->abortResultCache();
             AddMessage2Log($ex->getMessage());
         }
@@ -69,11 +139,11 @@ class UserAddresses extends CBitrixComponent
     protected function getHLTable(): array
     {
 
-        $hlBlock = HighloadBlockTable::getList(
+        $hlBlock = HighloadBlockTable::getRow(
             [
-                "filter" => ["=NAME" => self::HL_TABLE_NAME]
+                "filter" => ["=TABLE_NAME" => self::HL_TABLE_NAME]
             ]
-        )->fetch();
+        );
 
         if (!$hlBlock) {
             throw new SystemException(
@@ -97,31 +167,88 @@ class UserAddresses extends CBitrixComponent
      * @throws \Bitrix\Main\ArgumentException
      * @throws \Bitrix\Main\ObjectPropertyException
      */
-    protected function getHLData(array $hlBlock, int $userId, bool $active = false): array
+    protected function getHLData(array $hlBlock, int $userId, int $offset, int $limit, bool $active = false): array
     {
 
-        if ($userId <= 0)
-        {
+        if ($userId <= 0) {
             throw new ArgumentOutOfRangeException(Loc::getMessage("UA_CLASS_USER_ID_ERROR"));
         }
 
         $filter = [
-            self::USER_ID => $userId
+            "=" . self::USER_ID => $userId
         ];
 
-        if ($active)
-        {
+        if ($active) {
             $filter[self::ACTIVE] = "Y";
         }
 
         $hlDataClass = (HighloadBlockTable::compileEntity($hlBlock))->getDataClass();
 
-        return $hlDataClass::getList(
+        $result =  $hlDataClass::getList(
             array(
                 "filter" => $filter,
-                "select" => [self::ADDRESS]
+                "select" => [self::ID, self::ADDRESS],
+                "offset" => $offset,
+                "limit" => $limit
             )
-        )->fetchAll();
+        );
+
+        return $result->fetchAll();
+    }
+
+    /**
+     * Получение количества записей в таблице
+     *
+     * @param array $hlBlock
+     * @param int $userId
+     * @param bool $active
+     * @return int
+     * @throws ArgumentOutOfRangeException
+     * @throws SystemException
+     * @throws \Bitrix\Main\ArgumentException
+     * @throws \Bitrix\Main\ObjectPropertyException
+     */
+   protected function getPageCount(array $hlBlock, int $userId, bool $active = false): int {
+       if ($userId <= 0) {
+           throw new ArgumentOutOfRangeException(Loc::getMessage("UA_CLASS_USER_ID_ERROR"));
+       }
+
+       $filter = [
+           "=" . self::USER_ID => $userId
+       ];
+
+       if ($active) {
+           $filter[self::ACTIVE] = "Y";
+       }
+
+       $hlDataClass = (HighloadBlockTable::compileEntity($hlBlock))->getDataClass();
+
+       return  $hlDataClass::getList(
+           array(
+               "filter" => $filter,
+               "count_total" => true
+           )
+       )->getCount();
+   }
+
+    /**
+     * Подготовка данных для таблицы
+     *
+     * @param array $tableData
+     * @return array
+     */
+    protected function prepareData(array $tableData): array {
+
+        $result = [];
+
+        foreach ($tableData as $data) {
+            $result[]["data"] = [
+                self::ID => $data[self::ID],
+                self::ADDRESS => $data[self::ADDRESS]
+            ];
+        }
+
+        return $result;
     }
 
     /**
@@ -133,13 +260,22 @@ class UserAddresses extends CBitrixComponent
      */
     protected function includeModule(): bool
     {
-        if (!Loader::includeModule(self::MODULE_ID_HL))
-        {
+        if (!Loader::includeModule(self::MODULE_ID_HL)) {
             throw new SystemException(Loc::getMessage("UA_CLASS_MODULE_NOT_INSTALLED",
                 ["#MODULE_ID#" => self::MODULE_ID_HL]
             ));
         }
 
         return true;
+    }
+
+    /**
+     * Проверка, включено ли управляемое кеширование
+     *
+     * @return bool
+     */
+    protected function includedTagCache(): bool
+    {
+        return defined("BX_COMP_MANAGED_CACHE") && $this->arParams["CACHE_TYPE"] === "A";
     }
 }

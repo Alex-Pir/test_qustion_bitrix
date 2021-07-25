@@ -1,0 +1,15 @@
+{
+  "name": "artbyte/test",
+  "description": "Тестовое задание в компанию ARTBYTE",
+  "authors": [
+    {
+      "name": "Alexander Pirogov",
+      "email": "bellatisbel@gmail.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Artbyte\\": "lib/Artbyte/"
+    }
+  }
+}
