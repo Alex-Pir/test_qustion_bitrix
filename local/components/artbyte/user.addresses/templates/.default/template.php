@@ -29,20 +29,8 @@ $APPLICATION->includeComponent(
     [
         "GRID_ID" => "user_addresses",
         "ROWS" => $arResult["ITEMS"],
-        "COLUMNS" => $arResult["COLUMNS"]
+        "COLUMNS" => $arResult["COLUMNS"],
+        "NAV_OBJECT" => $arResult["PAGE_NAVIGATION"]
     ],
     $this->getComponent()
 );
-
-if ($arResult["PAGE_NAVIGATION"] && $arResult["PAGE_NAVIGATION"] instanceof PageNavigation) {
-    $APPLICATION->IncludeComponent(
-        "bitrix:main.pagenavigation",
-        "grid",
-        array(
-            "NAV_OBJECT" => $arResult["PAGE_NAVIGATION"],
-            "PAGE_WINDOW" => $arResult["PAGE_NAVIGATION"]->getPageSize(),
-            "SHOW_ALWAYS" => $arResult["PAGE_NAVIGATION"]->allRecordsAllowed(),
-        ),
-        $this->getComponent()
-    );
-}

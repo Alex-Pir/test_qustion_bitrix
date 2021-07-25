@@ -69,34 +69,32 @@ class UserAddresses extends CBitrixComponent
     {
         global $USER, $CACHE_MANAGER;
 
-        $pagerParameters = CDBResult::GetNavParams($arNavParams);
+        $pagerParameters = $GLOBALS["NavNum"];
 
         if (!$USER->IsAuthorized())
         {
             return;
         }
 
+        //получаем параметры постраничной навигации
+        $gridOptions = new Bitrix\Main\Grid\Options(self::GRID_ID);
+        $navParams = $gridOptions->GetNavParams();
+        $nav = new Bitrix\Main\UI\PageNavigation(self::GRID_ID);
+        $nav->allowAllRecords(false)
+            ->setPageSize($navParams["nPageSize"])
+            ->initFromUri();
+
         try
         {
             $this->includeModule();
 
-            $cacheKey = md5(SITE_ID . $USER->GetID() . serialize($this->arParams) . serialize($pagerParameters));
-
-            if ($this->startResultCache(false, [$USER->GetID(), $this->arParams, $pagerParameters], self::CACHE_DIR))
+            if ($this->startResultCache(false, [$USER->GetID(), $this->arParams, serialize($nav)], self::CACHE_DIR))
             {
-
+                //регистрируем тег, для управляемого кеша
                 if ($this->includedTagCache())
                 {
                     $CACHE_MANAGER->RegisterTag(self::CACHE_TAG);
                 }
-
-                $gridOptions = new Bitrix\Main\Grid\Options(self::GRID_ID);
-                $navParams = $gridOptions->GetNavParams();
-
-                $nav = new Bitrix\Main\UI\PageNavigation(self::GRID_ID);
-                $nav->allowAllRecords(false)
-                    ->setPageSize(1)
-                    ->initFromUri();
 
                 $hlBlock = $this->getHLTable();
                 $useActive = $this->arParams[self::USE_ACTIVE_ADDRESSES] === "Y";
@@ -138,7 +136,6 @@ class UserAddresses extends CBitrixComponent
      */
     protected function getHLTable(): array
     {
-
         $hlBlock = HighloadBlockTable::getRow(
             [
                 "filter" => ["=TABLE_NAME" => self::HL_TABLE_NAME]
