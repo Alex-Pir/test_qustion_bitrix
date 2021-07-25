@@ -69,8 +69,6 @@ class UserAddresses extends CBitrixComponent
     {
         global $USER, $CACHE_MANAGER;
 
-        $pagerParameters = $GLOBALS["NavNum"];
-
         if (!$USER->IsAuthorized())
         {
             return;
@@ -81,7 +79,7 @@ class UserAddresses extends CBitrixComponent
         $navParams = $gridOptions->GetNavParams();
         $nav = new Bitrix\Main\UI\PageNavigation(self::GRID_ID);
         $nav->allowAllRecords(false)
-            ->setPageSize($navParams["nPageSize"])
+            ->setPageSize(1)
             ->initFromUri();
 
         try
@@ -115,9 +113,9 @@ class UserAddresses extends CBitrixComponent
                     "COLUMNS",
                     "PAGE_NAVIGATION"
                 ]);
-            }
 
-            $this->includeComponentTemplate();
+                $this->includeComponentTemplate();
+            }
         }
         catch (Exception $ex)
         {

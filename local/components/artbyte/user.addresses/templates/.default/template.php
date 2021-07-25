@@ -15,13 +15,11 @@ if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
     die();
 }
 
+$this->setFrameMode(true);
+
 if (empty($arResult)) {
     return;
 }
-
-echo "<pre>";
-print_r($arResult);
-echo "</pre>";
 
 $APPLICATION->includeComponent(
     "bitrix:main.ui.grid",
