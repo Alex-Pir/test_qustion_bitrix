@@ -1,7 +1,8 @@
-<?
+<?php
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/header.php");
 $APPLICATION->SetTitle("Адреса пользователей");
-?><?$APPLICATION->IncludeComponent(
+?>
+<?$APPLICATION->IncludeComponent(
 	"artbyte:user.addresses", 
 	".default", 
 	array(
@@ -11,4 +12,5 @@ $APPLICATION->SetTitle("Адреса пользователей");
 		"COMPONENT_TEMPLATE" => ".default"
 	),
 	false
-);?><?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>
+);?>
+<?require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");?>

@@ -9,26 +9,16 @@
  * @var string $templateFolder
  */
 
-use Bitrix\Main\UI\PageNavigation;
-
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true) {
     die();
 }
 
-$this->setFrameMode(true);
+if(property_exists($this->getComponent(), "arResultCacheKeys")) {
 
-if (empty($arResult)) {
-    return;
+    if(!is_array($this->getComponent()->arResultCacheKeys)) {
+        $this->getComponent()->arResultCacheKeys = array();
+    }
+
+    $this->getComponent()->arResultCacheKeys[] = "arResult";
+    $this->getComponent()->arResult["arResult"] = $arResult;
 }
-
-$APPLICATION->includeComponent(
-    "bitrix:main.ui.grid",
-    "",
-    [
-        "GRID_ID" => "user_addresses",
-        "ROWS" => $arResult["ITEMS"],
-        "COLUMNS" => $arResult["COLUMNS"],
-        "NAV_OBJECT" => $arResult["PAGE_NAVIGATION"]
-    ],
-    $this->getComponent()
-);
